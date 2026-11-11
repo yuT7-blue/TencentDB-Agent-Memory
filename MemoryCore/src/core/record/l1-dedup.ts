@@ -25,6 +25,7 @@ import { hasClientEmbedding, type EmbeddingService } from "../store/embedding.js
 import type { LLMRunner, Logger, TraceContext } from "../types.js";
 import { buildTraceParams } from "../types.js";
 import { recallL1Candidates } from "../tools/l1-candidate-recall.js";
+import { parseL1Metadata } from "./l1-provenance.js";
 
 const TAG = "[memory-tdai][l1-dedup]";
 
@@ -204,16 +205,15 @@ async function runLlmJudgment(
 // ============================
 
 function hitToMemoryRecord(r: L1SearchResult): MemoryRecord {
+  const parsed = parseL1Metadata(r.metadata_json);
   return {
     id: r.record_id,
     content: r.content,
     type: r.type as MemoryRecord["type"],
     priority: r.priority,
     scene_name: r.scene_name,
-    source_message_ids: [],
-    metadata: r.metadata_json
-      ? (() => { try { return JSON.parse(r.metadata_json); } catch { return {}; } })()
-      : {},
+    source_message_ids: parsed.sourceMessageIds,
+    metadata: parsed.metadata as MemoryRecord["metadata"],
     timestamps: [r.timestamp_str].filter(Boolean),
     createdAt: "",
     updatedAt: "",
