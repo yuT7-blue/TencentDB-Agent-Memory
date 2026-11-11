@@ -26,6 +26,7 @@ import { mkdirSync, existsSync } from "node:fs";
 import path from "node:path";
 import type { DatabaseSync, StatementSync, SQLInputValue } from "node:sqlite";
 import type { MemoryRecord } from "../../record/l1-writer.js";
+import { serializeL1Metadata } from "../../record/l1-provenance.js";
 import type { EmbeddingProviderInfo } from "../embedding.js";
 import type {
   IMemoryStore,
@@ -1253,7 +1254,7 @@ export class VectorStore implements IMemoryStore {
           tsEnd,
           record.createdAt,
           record.updatedAt,
-          JSON.stringify(record.metadata),
+          serializeL1Metadata(record.metadata, record.source_message_ids),
           (record as MemoryRecord & { userId?: string }).userId || DEFAULT_ISOLATION_ID,
           (record as MemoryRecord & { agentId?: string }).agentId || DEFAULT_ISOLATION_ID,
         );
@@ -1291,7 +1292,7 @@ export class VectorStore implements IMemoryStore {
               tsStr,
               tsStart,
               tsEnd,
-              JSON.stringify(record.metadata),
+              serializeL1Metadata(record.metadata, record.source_message_ids),
             );
           } catch (ftsErr) {
             // FTS write failure is non-fatal — log and continue
