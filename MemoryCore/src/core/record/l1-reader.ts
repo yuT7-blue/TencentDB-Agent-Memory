@@ -15,6 +15,7 @@ import type { MemoryRecord, MemoryType, EpisodicMetadata } from "./l1-writer.js"
 import type { IMemoryStore, L1RecordRow, L1QueryFilter } from "../store/types.js";
 import type { StorageAdapter } from "../storage/adapter.js";
 import { StoragePaths } from "../storage/types.js";
+import { parseL1Metadata } from "./l1-provenance.js";
 
 // Re-export types that readers need
 export type { MemoryRecord, MemoryType, EpisodicMetadata } from "./l1-writer.js";
@@ -56,12 +57,8 @@ export async function queryMemoryRecords(
  * Convert a raw SQLite L1RecordRow to a MemoryRecord (same shape as JSONL records).
  */
 function rowToMemoryRecord(row: L1RecordRow): MemoryRecord {
-  let metadata: EpisodicMetadata | Record<string, never> = {};
-  try {
-    metadata = JSON.parse(row.metadata_json) as EpisodicMetadata | Record<string, never>;
-  } catch {
-    // malformed JSON — use empty object
-  }
+  const parsed = parseL1Metadata(row.metadata_json);
+  const metadata = parsed.metadata as EpisodicMetadata | Record<string, never>;
 
   // Reconstruct timestamps array from timestamp_start / timestamp_end
   const timestamps: string[] = [];
@@ -77,7 +74,7 @@ function rowToMemoryRecord(row: L1RecordRow): MemoryRecord {
     type: row.type as MemoryType,
     priority: row.priority,
     scene_name: row.scene_name,
-    source_message_ids: [], // not stored in SQLite (vector search doesn't need them)
+    source_message_ids: parsed.sourceMessageIds
     metadata,
     timestamps,
     createdAt: row.created_time,
